@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -21,6 +22,42 @@ import java.util.stream.Collectors;
 
 @Service
 public class ETLServiceImpl implements ETLService {
+    @Override
+    public Result processRowData2(final RowData rowData) {
+        final Result result = new Result();
+        final List<Attendee> flatAttendees = Arrays.stream(rowData.getPartners()).map(partner -> {
+            final Set<LocalDate> set = new HashSet(Arrays.asList(partner.getAvailableDates()));
+            return set.stream()
+                      .filter(d -> set.contains(d.plusDays(1)))
+                      .map(d -> new Attendee(partner.getEmail(), partner.getCountry(), d, d.plusDays(1)))
+                      .collect(Collectors.toList());
+        }).flatMap(Collection::stream).collect(Collectors.toList());
+
+        final Map<String, Map<LocalDate, List<Attendee>>> groupOfcountries = flatAttendees.stream()
+                                                                                          .collect(
+                                                                                                  Collectors.groupingBy(
+                                                                                                          Attendee::getCountry
+                                                                                                          ,
+                                                                                                          Collectors.groupingBy(
+                                                                                                                  Attendee::getStartDate
+                                                                                                          ))
+                                                                                          );
+
+        result.setCountries(groupOfcountries.keySet().stream().map(country -> {
+
+            final Map<LocalDate, List<Attendee>> x = groupOfcountries.get(country);
+            final Map.Entry<LocalDate, List<Attendee>> maxEntry = Collections.max(x.entrySet(),
+                                                                                  (Map.Entry<LocalDate, List<Attendee>> e1, Map.Entry<LocalDate, List<Attendee>> e2) -> e1
+                                                                                          .getValue()
+                                                                                          .size()
+                                                                                          > e2.getValue()
+                                                                                              .size() ? 1 : 0);
+            final List<String> lst = maxEntry.getValue().stream().map(Attendee::getEmail).collect(Collectors.toList());
+            return new Country(maxEntry.getValue().size(), lst, country, maxEntry.getKey());
+        }).collect(Collectors.toList()));
+        return result;
+
+    }
 
     @Override
     public Result processRowData(final RowData rowData) {

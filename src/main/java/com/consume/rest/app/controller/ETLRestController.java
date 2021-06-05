@@ -44,6 +44,18 @@ public class ETLRestController {
         return this.result;
     }
 
+    @GetMapping("/extract2")
+    public Result extractAttendees2() throws IOException {
+        final RestTemplate getRestTemplate = new RestTemplate();
+        final ResponseEntity<RowData> responseEntity = getRestTemplate.getForEntity(
+                this.getDataEndpoint, RowData.class);
+
+        final RowData rowData = responseEntity.getBody();
+        this.result = this.etlService.processRowData2(rowData);
+
+        return this.result;
+    }
+
     @GetMapping("/load")
     public String loadAttendees() throws IOException {
         final String answer = postTheResult(this.result);

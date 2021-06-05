@@ -7,4 +7,6 @@ public interface ETLService {
 
     Result processRowData(RowData rowData);
 
+    Result processRowData2(RowData rowData);
+
 }
